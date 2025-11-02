@@ -1,0 +1,16 @@
+GOAL: Create a Encoding Transformer that can predict the possibility of a News headline to be Fake or Not.
+
+OBJECTIVES:
+:: 29/10/25
+- [ ] Create an Encoding Transformer using pytorch
+
+* Write my own
+    - Tokenizer        %Started -- Will probably need to rewrite in go ... or try the new python GIL update%   
+    - Transformer
+    - Multi Headed Attention
+    - Loss Function
+    - Optimizer (try writing ADAMW and if time MUON)
+
+* Can use libraries for:
+    - Backpropogation  %but will have to understand it%
+
