@@ -5,12 +5,14 @@ OBJECTIVES:
 - [ ] Create an Encoding Transformer using pytorch
 
 * Write my own
-    - Tokenizer        %Started -- Will probably need to rewrite in go ... or try the new python GIL update%   
+    - Tokenizer        %Started -- Will probably need to rewrite in go ... or try the new python GIL update% 
+    - Positional Embedding Layer  
     - Transformer
     - Multi Headed Attention
     - Loss Function
     - Optimizer (try writing ADAMW and if time MUON)
 
 * Can use libraries for:
+    - Token Embedding Layer     %For this will simply use the nn.Embedding%
     - Backpropogation  %but will have to understand it%
 
