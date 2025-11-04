@@ -3,6 +3,7 @@ GOAL: Create a Encoding Transformer that can predict the possibility of a News h
 OBJECTIVES:
 :: 29/10/25
 - [ ] Create an Encoding Transformer using pytorch
+- [ ] Write Proper Comments and Description for each class and code where needed
 
 * Write my own
     - Tokenizer        %Started -- Will probably need to rewrite in go ... or try the new python GIL update% 
@@ -15,4 +16,3 @@ OBJECTIVES:
 * Can use libraries for:
     - Token Embedding Layer     %For this will simply use the nn.Embedding%
     - Backpropogation  %but will have to understand it%
-
