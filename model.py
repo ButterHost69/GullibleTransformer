@@ -15,19 +15,22 @@ class MultiHeadAttention(nn.Module):
     Input -> Token Embedding
     """
     
-    def __init__(self, embedding_dim, total_num_tokens, num_heads, batch_size, dropout=0.2):
+    def __init__(self, embedding_dim, num_heads, dropout=0.2):
+        super().__init__()
         assert embedding_dim % num_heads == 0, "embedding_dim % num_heads has to be 0"
         
         self.self_attention_dim = embedding_dim // num_heads
         self.embedding_dim = embedding_dim
-        self.total_num_tokens = total_num_tokens
         self.num_heads = num_heads
-        self.batch_size = batch_size
+        
         
         # X -> tokens_len X embedding_dim
         self.q_nn = nn.Linear(self.embedding_dim , self.embedding_dim)
         self.k_nn = nn.Linear(self.embedding_dim , self.embedding_dim)
         self.v_nn = nn.Linear(self.embedding_dim , self.embedding_dim)
+        # the projection layer 
+        self.c_proj = nn.Linear(self.embedding_dim, self.embedding_dim)
+        
         self.dropout = nn.Dropout(dropout)       
         self.res_dropout = nn.Dropout(dropout)       
     
@@ -38,20 +41,15 @@ class MultiHeadAttention(nn.Module):
         # Q Shape: (total_num_tokens, embedding_dim)
         # K Shape: (total_num_tokens, embedding_dim)
         # V Shape: (total_num_tokens, embedding_dim)
-        q_w = self.q_nn(X)
-        k_w = self.k_nn(X)
-        v_w = self.v_nn(X)
-        
-        # Dot Product
-        Q = X @ q_w.T # (batch_size, total_tokens, embedding_dim) 
-        K = X @ k_w.T # (batch_size, total_tokens, embedding_dim)
-        V = X @ v_w.T # (batch_size, total_tokens, embedding_dim)
-        
+        Q = self.q_nn(X)
+        K = self.k_nn(X)
+        V = self.v_nn(X)
+                
         # Reshape the Q, K, V Matrix to (batch_size, num_heads, total_num_tokens, self_embedding_dim)
         # Q, K, V: (batch_size, total_num_tokens, num_heads, self_embedding_dim)
-        Q = Q.reshape(self.batch_size, self.total_num_tokens, self.num_heads, self.self_attention_dim)
-        K = K.reshape(self.batch_size, self.total_num_tokens, self.num_heads, self.self_attention_dim)
-        V = V.reshape(self.batch_size, self.total_num_tokens, self.num_heads, self.self_attention_dim)
+        Q = Q.reshape(B, T, self.num_heads, self.self_attention_dim)
+        K = K.reshape(B, T, self.num_heads, self.self_attention_dim)
+        V = V.reshape(B, T, self.num_heads, self.self_attention_dim)
         
         # Regroup Q, K, V: (batch_size, , num_heads, total_num_tokens, self_embedding_dim)
         Q = Q.transpose(1, 2)
@@ -59,11 +57,8 @@ class MultiHeadAttention(nn.Module):
         V = V.transpose(1, 2)
         
         # Perform Self Attention
-        attention = F.scaled_dot_product_attention(Q, K, V)
-        attention = F.softmax(attention, dim=-1)
-        attention = self.dropout(attention)
+        y = F.scaled_dot_product_attention(Q, K, V, dropout_p=0.0 if not self.training else 0.2)
         
-        y = attention @ V
         # Re-assemble the heads side by side and project back to residual stream
         y = y.transpose(1, 2).contiguous().view(B, T, -1)
         y = self.res_dropout(self.c_proj(y))
@@ -101,22 +96,22 @@ class Block(nn.Module):
     def __init__(
         self, embedding_dim:int, 
         bias:bool,
-        total_num_tokens:int, 
         num_heads:int, 
-        batch_size:int,
         dropout=0.2,
     ):
         super().__init__()
         self.ln_1 = LayerNorm(embedding_dim, bias=bias)
         self.attn = MultiHeadAttention(
             embedding_dim=embedding_dim, 
-            batch_size=batch_size,
             num_heads=num_heads,
             dropout=dropout,
-            total_num_tokens=total_num_tokens,
         )
         self.ln_2 = LayerNorm(embedding_dim, bias=bias)
-        self.mlp = MLP()
+        self.mlp = MLP(
+            bias=bias,
+            embedding_dim=embedding_dim,
+            dropout=dropout
+        )
 
     def forward(self, x):
         x = x + self.attn(self.ln_1(x))
@@ -128,39 +123,43 @@ class Encoder(nn.Module):
     def __init__(
         self, 
         n_layers:int, 
-        block_size:int, 
+        # block_size:int, 
         vocab_size:int,
         embedding_dim:int,
         bias:bool,
-        total_num_tokens:int, 
         num_heads:int, 
-        batch_size:int,
         output_size:int,
         dropout=0.2,
     ):
-        
-        assert vocab_size is not 0 , "Vocab Size cannot be 0"
-        assert block_size is not 0 , "Block Size cannot be 0"
+        super().__init__()
+        assert vocab_size != 0 , "Vocab Size cannot be 0"
+        # assert block_size is not 0 , "Block Size cannot be 0"
         
         self.attention_layers = nn.ModuleList([
             Block(embedding_dim=embedding_dim, 
                 bias=bias,
-                total_num_tokens=total_num_tokens, 
                 num_heads=num_heads, 
-                batch_size=batch_size,
                 dropout=dropout,
             ) for _ in range(n_layers)
         ])
         
-        self.normalizer = LayerNorm(embedding_dim, bias=bias),
+        self.normalizer = LayerNorm(embedding_dim, bias=bias)
         self.final_linear = nn.Linear(embedding_dim, output_size, bias=False)
     
     def forward(self, X, targets):
 
-        for block in self.transformer.h:
+        for block in self.attention_layers:
             X = block(X)
-        X = self.transformer.ln_f(X)
+        X = self.normalizer(X)
         
-        logits = self.lm_head(X)
-        loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
+        # For classification, we usually pick the first token or average.
+        # Currently, this calculates logits for EVERY token.
+        # Assuming you want to classify the whole sentence:
+        
+        X_pooled = X.mean(dim=1) # Average all tokens to get one vector per sentence
+        logits = self.final_linear(X_pooled)
+        
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits, targets)
         return logits, loss
