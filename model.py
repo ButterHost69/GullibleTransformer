@@ -8,6 +8,8 @@ import torch
 import torch.nn.functional as F
 
 
+from embedding import CompleteEmbedding
+
 class MultiHeadAttention(nn.Module):
     """sumary_line
     
@@ -143,11 +145,14 @@ class Encoder(nn.Module):
             ) for _ in range(n_layers)
         ])
         
+        self.embeddings = CompleteEmbedding(embedding_dim=embedding_dim, vocab_size=vocab_size, context_len=vocab_size)
         self.normalizer = LayerNorm(embedding_dim, bias=bias)
         self.final_linear = nn.Linear(embedding_dim, output_size, bias=False)
     
     def forward(self, X, targets):
-
+        # Embed Tokens
+        X = self.embeddings(X)
+        
         for block in self.attention_layers:
             X = block(X)
         X = self.normalizer(X)

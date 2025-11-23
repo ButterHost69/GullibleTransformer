@@ -99,11 +99,11 @@ print("Initializing a new model from scratch")
 vocab_size = 500
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-embbed_layer = CompleteEmbedding(
-    embedding_dim=n_embd, 
-    vocab_size=vocab_size, 
-    context_len=vocab_size
-).to(device)
+# embbed_layer = CompleteEmbedding(
+#     embedding_dim=n_embd, 
+#     vocab_size=vocab_size, 
+#     context_len=vocab_size
+# ).to(device)
 
 model = Encoder(
     n_layers=n_layer, 
@@ -116,8 +116,8 @@ model = Encoder(
 ).to(device)
 
 
-all_params = list(model.parameters()) + list(embbed_layer.parameters())
-optimizer = torch.optim.AdamW(params=all_params, lr=learning_rate)
+# all_params = list(model.parameters()) + list(embbed_layer.parameters())
+optimizer = torch.optim.AdamW(params=model.parameters(), lr=learning_rate)
 
 
 def train(epochs: int, train_dataloader: DataLoader, optimizer: optim.Optimizer, model: nn.Module):
@@ -126,13 +126,12 @@ def train(epochs: int, train_dataloader: DataLoader, optimizer: optim.Optimizer,
     total_loss = 0
     size = len(train_dataloader.dataset)
     model.train()
-    embbed_layer.train()
     
     for batch, (X, y) in enumerate(train_dataloader):
         X, y = X.to(device), y.to(device)
 
         optimizer.zero_grad()
-        X = embbed_layer(X)
+        
         pred, loss = model(X, y)
 
         loss.backward()
@@ -159,13 +158,11 @@ def test(epochs:int, test_dataloader:DataLoader, model:nn.Module):
     total_loss = 0
     size = len(test_dataloader.dataset)
     model.eval()
-    embbed_layer.eval()
     
     with torch.no_grad():
         for (X, y) in test_dataloader:
             X, y = X.to(device), y.to(device)
 
-            X = embbed_layer(X)
             pred, loss = model(X, y)
             
             total_loss += loss.item()
