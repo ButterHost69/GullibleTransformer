@@ -1,3 +1,4 @@
 .env
 data/english-corpora
 data/kaggle/*.zip
+data/#synthetic/tokenizer_corpus2.txt

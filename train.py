@@ -56,7 +56,7 @@ data_tensor = pad_sequence(input_tensor_list, batch_first=True, padding_value=0)
 label_tensor = torch.tensor(labels)
 
 # Enforce a Max Length (Truncation)
-# To save memory and cut off extremely long titles
+# Cut off extremely long titles
 MAX_LEN = 1024
 if data_tensor.shape[1] > MAX_LEN:
     data_tensor = data_tensor[:, :MAX_LEN]

@@ -158,14 +158,16 @@ if __name__ == "__main__":
     tokenizer = MyBPETokenizer()
     
     corpus = ""
-    with open("./data/#synthetic/tokenizer_corpus.txt", mode="r", encoding="utf-8") as file:
+    with open("./data/#synthetic/tokenizer_corpus2.txt", mode="r", encoding="utf-8") as file:
         corpus = '\n'.join(file.readlines())
     
-    tokenizer.train(corpus=corpus[:100], max_tokens= 256 + 10)
-    tokenizer.save("./data/#synthetic/tokenizer_v0")
+    
+    end_len = int(len(corpus)*0.5)
+    tokenizer.train(corpus=corpus[:end_len], max_tokens= 256 + 1024)
+    tokenizer.save("./data/#synthetic/tokenizer_v1")
     
     new_tokenizer = MyBPETokenizer()
-    new_tokenizer.load("./data/#synthetic/tokenizer_v0")
+    new_tokenizer.load("./data/#synthetic/tokenizer_v1")
     
     print(f"Old: {tokenizer.encode("hello ")} New: {new_tokenizer.encode("hello ")}")
     print(f"Old: {tokenizer.decode(tokenizer.encode("hello "))} New: {new_tokenizer.decode(new_tokenizer.encode("hello "))}")

@@ -91,7 +91,7 @@ if __name__ == "__main__":
     
     posEmb = SinCosPositionEmbedding(embedding_dim=D_MODEL, max_num_tokens=MAX_LEN)
     pe_matrix = posEmb.get_embedding_matrix()
-    pe_numpy = pe_matrix.numpy() # Convert to NumPy for Matplotlib
+    pe_numpy = pe_matrix.squeeze().numpy() # Convert to NumPy for Matplotlib
 
     # --- Plotting ---
     print(f"Plotting positional encoding for d_model={D_MODEL} and max_len={MAX_LEN}")
